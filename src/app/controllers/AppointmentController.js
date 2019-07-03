@@ -42,7 +42,7 @@ class AppointmentController {
     });
 
     if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ error: 'Validação falhou' });
+      return res.status(400).json({ error: 'Validação falhou!' });
     }
 
     const { provider_id, date } = req.body;
@@ -58,7 +58,14 @@ class AppointmentController {
         .json({ error: 'Você só pode criar agendamento com fornecedores.' });
     }
 
-    // verificar se a data informada é maior que a data atual
+    /* verifica se usuario é o mesmo fornecedor */
+    if (req.userId === provider_id) {
+      return res
+        .status(401)
+        .json({ error: 'Você não pode fazer um agendamento para você mesmo.' });
+    }
+
+    /* verificar se a data informada é maior que a data atual */
     const hourStart = startOfHour(parseISO(date));
 
     if (isBefore(hourStart, new Date())) {
@@ -88,14 +95,17 @@ class AppointmentController {
       date,
     });
 
-    /* Envia notificação para o fornecedor */
-
+    /**
+     *  Envia notificação para o fornecedor
+     */
     const user = await User.findByPk(req.userId);
 
+    /* formata a data */
     const formattedDate = format(hourStart, "dd 'de' MMMM', às' HH:mm'h'", {
       locale: ptBR,
     });
 
+    /* envia a notificação */
     await Notification.create({
       content: `Novo agendamento de ${user.name} para o dia ${formattedDate}.`,
       user: provider_id,
