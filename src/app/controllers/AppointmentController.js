@@ -5,6 +5,7 @@ import User from '../models/User';
 import File from '../models/File';
 import Appointment from '../models/Appointment';
 import Notification from '../schemas/Notification';
+import Mail from '../../lib/Mail';
 
 class AppointmentController {
   async index(req, res) {
@@ -75,7 +76,7 @@ class AppointmentController {
     }
 
     /* Verificar se o horario está disponível */
-    const checkAvailability = await Appointment.findOne({
+    const checkNotAvailability = await Appointment.findOne({
       where: {
         provider_id,
         canceled_at: null,
@@ -83,7 +84,7 @@ class AppointmentController {
       },
     });
 
-    if (checkAvailability) {
+    if (checkNotAvailability) {
       return res.status(400).json({
         error: 'Horário indisponível!',
       });
@@ -92,7 +93,7 @@ class AppointmentController {
     const appointment = await Appointment.create({
       user_id: req.userId,
       provider_id,
-      date,
+      date: hourStart,
     });
 
     /**
@@ -117,6 +118,13 @@ class AppointmentController {
   async delete(req, res) {
     const appointment = await Appointment.findOne({
       where: { id: req.params.id, canceled_at: null, user_id: req.userId },
+      include: [
+        {
+          model: User,
+          as: 'provider',
+          attributes: ['name', 'email'],
+        },
+      ],
     });
 
     if (!appointment) {
@@ -134,6 +142,13 @@ class AppointmentController {
     appointment.canceled_at = new Date();
 
     await appointment.save();
+
+    // envio de email
+    await Mail.sendMail({
+      to: `${appointment.provider.name} <${appointment.provider.email}>`,
+      subject: 'Agendamento cancelado.',
+      text: 'Você tem um novo cancelamento!',
+    });
 
     return res.json(appointment);
   }
