@@ -7,9 +7,9 @@ import logo from '~/assets/logo.svg';
 
 const schema = Yup.object().shape({
   email: Yup.string()
-    .email('Insira um e-mail válido')
-    .required('O e-email é obrigatório'),
-  password: Yup.string().required('A senha é obrigatória'),
+    .email('Insira um e-mail válido!')
+    .required('O e-email é obrigatório!'),
+  password: Yup.string().required('A senha é obrigatória!'),
 });
 
 export default function SignIn() {
@@ -26,7 +26,7 @@ export default function SignIn() {
         <Input name="password" type="password" placeholder="Sua senha" />
 
         <button type="submit">Acessar</button>
-        <Link to="/register">Criar conta gratuita!</Link>
+        <Link to="/register">Criar conta gratuita</Link>
       </Form>
     </>
   );
