@@ -1,18 +1,58 @@
-import React, { useState, useMemo } from 'react';
-import { format, subDays, addDays } from 'date-fns';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  format,
+  subDays,
+  addDays,
+  setHours,
+  setMinutes,
+  setSeconds,
+  isBefore,
+  isEqual,
+  parseISO,
+} from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
+import { utcToZonedTime } from 'date-fns-tz';
 import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import api from '~/services/api';
 
 import { Container, Time } from './styles';
 
+const range = [8, 9, 10, 11, 13, 14, 15, 16, 17, 18];
+
 export default function Dashboard() {
+  const [schedule, setSchedule] = useState([]);
   const [date, setDate] = useState(new Date());
 
   const dateFormatted = useMemo(
     () => format(date, "d 'de' MMMM", { locale: ptBR }),
     [date]
   );
+
+  useEffect(() => {
+    async function loadSchedule() {
+      const response = await api.get('schedules', {
+        params: { date },
+      });
+
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      const data = range.map(hour => {
+        const checkDate = setSeconds(setMinutes(setHours(date, hour), 0), 0);
+        const compareDate = utcToZonedTime(checkDate, timezone);
+        return {
+          time: `${hour}:00`,
+          past: isBefore(compareDate, new Date()),
+          appointment: response.data.find(a =>
+            isEqual(parseISO(a.date), compareDate)
+          ),
+        };
+      });
+
+      setSchedule(data);
+    }
+
+    loadSchedule();
+  }, [date]);
 
   function handlePrevDay() {
     setDate(subDays(date, 1));
@@ -35,22 +75,14 @@ export default function Dashboard() {
       </header>
 
       <ul>
-        <Time past>
-          <strong>07:00</strong>
-          <span>Marta</span>
-        </Time>
-        <Time>
-          <strong>08:00</strong>
-          <span>Maria</span>
-        </Time>
-        <Time available>
-          <strong>09:00</strong>
-          <span>Em abero</span>
-        </Time>
-        <Time>
-          <strong>10:00</strong>
-          <span>Michele</span>
-        </Time>
+        {schedule.map(time => (
+          <Time key={time.time} past={time.past} available={!time.appointment}>
+            <strong>{time.time}</strong>
+            <span>
+              {time.appointment ? time.appointment.user.name : 'Em aberto'}
+            </span>
+          </Time>
+        ))}
       </ul>
     </Container>
   );
