@@ -17,7 +17,7 @@ export function* signIn({ payload }) {
     const { token, user } = response.data;
 
     if (!user.provider) {
-      toast.warn('Você não é um prestador de serviço.');
+      toast.error('Você não é um prestador de serviço.');
 
       return;
     }
@@ -26,9 +26,32 @@ export function* signIn({ payload }) {
 
     history.push('/dashboard');
   } catch (err) {
-    toast.warn('Usuário ou senha inválida!');
+    toast.error('Usuário ou senha inválida!');
     yield put(signFailure());
   }
 }
 
-export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
+export function* signUp({ payload }) {
+  try {
+    const { name, email, password } = payload;
+
+    yield call(api.post, 'users', {
+      name,
+      email,
+      password,
+      provider: true,
+    });
+
+    history.push('/');
+    toast.info('Cadastro realizado com sucesso! Favor efetuar o login.');
+  } catch (err) {
+    toast.error('Falha no cadastro, verifique os dados informados!');
+
+    yield put(signFailure());
+  }
+}
+
+export default all([
+  takeLatest('@auth/SIGN_IN_REQUEST', signIn),
+  takeLatest('@auth/SIGN_UP_REQUEST', signUp),
+]);
